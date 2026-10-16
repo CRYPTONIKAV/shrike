@@ -3,7 +3,7 @@ import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from "nod
 import { connect } from "node:net";
 import { delimiter, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { ProcessSpec, ProjectInfo, RunStatus } from "@shrike/schema";
+import type { Place, ProcessSpec, ProjectInfo, RunStatus } from "@shrike/schema";
 import { readEnv } from "@shrike/scanner";
 import { isWin, killTree, spawnShell, startTimeOf } from "./platform.ts";
 import { nodeAgentOk } from "./start/tools.ts";
@@ -88,6 +88,20 @@ export function shiftUrl(url: string | undefined, offset: number): string | unde
 }
 
 const portOf = (url: string | undefined) => (url ? LOOPBACK_PORT.exec(url)?.[2] : undefined);
+
+/** #17: expected lane places read from main-checkout files name main's ports. In a
+ * worktree every local port moves by `offset`, so shift each place's `detail`
+ * (`localhost:5173`) and any embedded local URL in its `id`
+ * (`client:http://localhost:5173`) the same way `shiftPlaces` shifts declared
+ * places. Non-local details and ids without a URL pass through untouched. Pure. */
+export function shiftExpectedPlaces(places: readonly Place[], offset: number): Place[] {
+  if (!offset) return [...places];
+  return places.map((p) => {
+    const detail = p.detail ? (shiftUrl(`http://${p.detail}`, offset)?.slice("http://".length) ?? p.detail) : p.detail;
+    const id = p.id.replace(/https?:\/\/[^\s]+/, (u) => shiftUrl(u, offset) ?? u);
+    return detail === p.detail && id === p.id ? p : { ...p, id, ...(detail === undefined ? {} : { detail }) };
+  });
+}
 
 /** W2: every known port, shifted, as env vars: APP_PORT (appUrl), SERVER_PORT (serverUrl), <NAME>_PORT per process, SHRIKE_PORT_OFFSET. */
 export function portEnv(project: Pick<ProjectInfo, "appUrl" | "processes">, serverUrl: string | undefined, offset: number): Record<string, string> {

@@ -12,7 +12,7 @@ import { inspector } from "./inspector.ts";
 import * as patches from "./patches.ts";
 import { paths } from "./paths.ts";
 import { liveConsent, loadProject, readConfig } from "./project.ts";
-import { liveUrlOf, portTaken, responds, Runner, shiftUrl } from "./runner.ts";
+import { liveUrlOf, portTaken, responds, Runner, shiftExpectedPlaces, shiftUrl } from "./runner.ts";
 import * as race from "./race.ts";
 import { randomHex, Store } from "./store.ts";
 
@@ -186,6 +186,10 @@ export async function openProject(root: string): Promise<ProjectInfo> {
     emit("checkpoint:update", []);
   }
   project = loaded.info;
+  // #17: expectedPlaces are read from files copied from main, so in a worktree
+  // they name main's ports. Shift them with the worktree's offset so every lane
+  // header shows the workspace's ports from the first frame.
+  if (project.expectedPlaces) project.expectedPlaces = shiftExpectedPlaces(project.expectedPlaces, offset());
   serverUrl = loaded.serverUrl;
   void memory.loadMemory(project.root).then((notes) => emit("memory:update", notes), () => {});
   return project;
