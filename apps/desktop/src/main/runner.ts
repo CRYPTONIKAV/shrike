@@ -98,9 +98,18 @@ export function shiftExpectedPlaces(places: readonly Place[], offset: number): P
   if (!offset) return [...places];
   return places.map((p) => {
     const detail = p.detail ? (shiftUrl(`http://${p.detail}`, offset)?.slice("http://".length) ?? p.detail) : p.detail;
-    const id = p.id.replace(/https?:\/\/[^\s]+/, (u) => shiftUrl(u, offset) ?? u);
+    const id = shiftPlaceId(p.id, offset);
     return detail === p.detail && id === p.id ? p : { ...p, id, ...(detail === undefined ? {} : { detail }) };
   });
+}
+
+/** Shift a place id's port: an embedded local URL (`client:http://localhost:5173`)
+ * via `shiftUrl`, else a trailing bare loopback host (`service:localhost:5173`). */
+function shiftPlaceId(id: string, offset: number): string {
+  const viaUrl = id.replace(/https?:\/\/[^\s]+/, (u) => shiftUrl(u, offset) ?? u);
+  if (viaUrl !== id) return viaUrl;
+  const bare = /(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]):(\d{1,5})$/.exec(id);
+  return bare ? `${id.slice(0, -bare[0].length)}${bare[1]}:${Number(bare[2]) + offset}` : id;
 }
 
 /** W2: every known port, shifted, as env vars: APP_PORT (appUrl), SERVER_PORT (serverUrl), <NAME>_PORT per process, SHRIKE_PORT_OFFSET. */
