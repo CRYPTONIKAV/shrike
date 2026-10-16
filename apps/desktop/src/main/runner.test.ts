@@ -5,8 +5,8 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import type { RunStatus } from "@shrike/schema";
-import { detectUrl, exitHint, liveUrlOf, portTaken, reapOrphans, Runner, trackGroups } from "./runner.ts";
+import type { Place, RunStatus } from "@shrike/schema";
+import { detectUrl, exitHint, liveUrlOf, portTaken, reapOrphans, Runner, shiftExpectedPlaces, trackGroups } from "./runner.ts";
 import { startTimeOf } from "./platform.ts";
 
 /** A killed group can linger a moment on Linux while its children are reaped. */
@@ -418,4 +418,20 @@ test("reliability: the next launch ends process groups a killed Shrike left runn
     process.kill(-other.pid!, "SIGKILL");
     r.killNow();
   }
+});
+
+test("shiftExpectedPlaces moves local ports by the worktree offset (#17)", () => {
+  const places: Place[] = [
+    { id: "client:http://localhost:5173", kind: "client", name: "WEB", detail: "localhost:5173" },
+    { id: "service:api", kind: "service", name: "API", detail: "localhost:5174" },
+    { id: "outside:api.stripe.com", kind: "outside", name: "STRIPE", detail: "api.stripe.com" },
+    { id: "data:sqlite:events.db", kind: "data", name: "SQLITE · events.db" },
+  ];
+  const shifted = shiftExpectedPlaces(places, 100);
+  assert.deepEqual(shifted[0], { id: "client:http://localhost:5273", kind: "client", name: "WEB", detail: "localhost:5273" });
+  assert.deepEqual(shifted[1], { id: "service:api", kind: "service", name: "API", detail: "localhost:5274" });
+  assert.deepEqual(shifted[2], places[2]);
+  assert.deepEqual(shifted[3], places[3]);
+  // Main (offset 0) is unchanged.
+  assert.deepEqual(shiftExpectedPlaces(places, 0), places);
 });
