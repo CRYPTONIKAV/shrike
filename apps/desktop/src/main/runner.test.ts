@@ -428,10 +428,10 @@ test("shiftExpectedPlaces moves local ports by the worktree offset (#17)", () =>
     { id: "data:sqlite:events.db", kind: "data", name: "SQLITE · events.db" },
   ];
   const shifted = shiftExpectedPlaces(places, 100);
-  assert.deepEqual(shifted[0], { id: "client:http://localhost:5273", kind: "client", name: "WEB", detail: "localhost:5273" });
-  assert.deepEqual(shifted[1], { id: "service:api", kind: "service", name: "API", detail: "localhost:5274" });
-  assert.deepEqual(shifted[2], places[2]);
-  assert.deepEqual(shifted[3], places[3]);
+  assert.deepStrictEqual(shifted[0], { id: "client:http://localhost:5273", kind: "client", name: "WEB", detail: "localhost:5273" });
+  assert.deepStrictEqual(shifted[1], { id: "service:api", kind: "service", name: "API", detail: "localhost:5274" });
+  assert.deepStrictEqual(shifted[2], places[2]);
+  assert.deepStrictEqual(shifted[3], places[3]);
   // Main (offset 0) is unchanged.
-  assert.deepEqual(shiftExpectedPlaces(places, 0), places);
+  assert.deepStrictEqual(shiftExpectedPlaces(places, 0), places);
 });
